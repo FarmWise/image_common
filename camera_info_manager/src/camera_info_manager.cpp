@@ -47,6 +47,7 @@
 #include "camera_calibration_parsers/parse.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
+using namespace std::placeholders;
 
 /** @file
 
@@ -78,20 +79,53 @@ const std::string
  * @param url default Uniform Resource Locator for loading and saving data.
  */
 CameraInfoManager::CameraInfoManager(
-  rclcpp::Node * node,
-  const std::string & cname,
+  rclcpp::Node * node, const std::string & cname,
   const std::string & url)
-: logger_(node->get_logger()),
+: CameraInfoManager(node->get_node_base_interface(),
+    node->get_node_services_interface(), node->get_node_logging_interface(), cname, url)
+{
+}
+
+/** Overloaded Constructor to use with Lifecycle nodes
+ *
+ * @param node rclcpp_lifecycle::LifecycleNode
+ * @param cname default camera name
+ * @param url default Uniform Resource Locator for loading and saving data.
+ */
+CameraInfoManager::CameraInfoManager(
+  rclcpp_lifecycle::LifecycleNode * node, const std::string & cname,
+  const std::string & url)
+: CameraInfoManager(node->get_node_base_interface(),
+    node->get_node_services_interface(), node->get_node_logging_interface(), cname, url)
+{
+}
+
+/** Base constructor that is used by other constructors
+ *
+ * @param node_base_interface Base interface for the node, available
+ * for both rclcpp::Node and rclcpp_lifecycle::LifecycleNode
+ * @param node_services_interface Services interface provided by
+ * the node that uses this class
+ * @param node_logger_interface Logger interface provided by the node
+ * that uses this class
+ * @param cname default camera name
+ * @param url default Uniform Resource Locator for loading and saving data.
+ * @param custom_qos Allows for setting a custom QoS for the CameraInfo messages
+ */
+CameraInfoManager::CameraInfoManager(
+  rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base_interface,
+  rclcpp::node_interfaces::NodeServicesInterface::SharedPtr node_services_interface,
+  rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logger_interface,
+  const std::string & cname, const std::string & url, rmw_qos_profile_t custom_qos)
+: logger_(node_logger_interface->get_logger()),
   camera_name_(cname),
   url_(url),
   loaded_cam_info_(false)
 {
   // register callback for camera calibration service request
-  info_service_ = node->create_service<SetCameraInfo>(
-    "set_camera_info",
-    std::bind(
-      &CameraInfoManager::setCameraInfoService, this, std::placeholders::_1,
-      std::placeholders::_2));
+  info_service_ = rclcpp::create_service<SetCameraInfo>(
+    node_base_interface, node_services_interface, "~/set_camera_info",
+    std::bind(&CameraInfoManager::setCameraInfoService, this, _1, _2), custom_qos, nullptr);
 }
 
 /** Get the current CameraInfo data.
