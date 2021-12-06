@@ -54,7 +54,7 @@ install(
 )
 
 ament_export_include_directories(include)
-ament_export_dependencies(ament_index_cpp camera_calibration_parsers rclcpp rcpputils sensor_msgs)
+ament_export_dependencies(ament_index_cpp camera_calibration_parsers rclcpp rcpputils sensor_msgs rclcpp_lifecycle)
 ament_export_libraries(${PROJECT_NAME})
 
 if(BUILD_TESTING)
